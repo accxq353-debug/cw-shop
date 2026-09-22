@@ -4,10 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, type User } from "@/db/schema";
 
-export const ADMIN_EMAIL =
-  process.env.ADMIN_EMAIL ?? "westaswestas61@gmail.com";
-export const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD ?? "@Westusss18378234";
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL as string;[cite: 1]
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD as string;[cite: 1]
 
 const SECRET = process.env.SESSION_SECRET ?? "cw-shop-session-secret-2026";
 export const SESSION_COOKIE = "dt_session";
@@ -22,11 +20,14 @@ export function hashPassword(password: string): string {
 export function verifyPassword(password: string, stored: string): boolean {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
-  const candidate = scryptSync(password, salt, 64);
-  const expected = Buffer.from(hash, "hex");
-  return (
-    candidate.length === expected.length && timingSafeEqual(candidate, expected)
-  );
+  try {
+    const candidate = scryptSync(password, salt, 64);
+    const expected = Buffer.from(hash, "hex");
+    if (candidate.length !== expected.length) return false;
+    return timingSafeEqual(candidate, expected);
+  } catch {
+    return false;
+  }
 }
 
 function sign(payload: string): string {
@@ -43,16 +44,21 @@ export function createToken(userId: number): string {
 export function readToken(token: string | undefined): number | null {
   if (!token) return null;
   const trimmed = token.trim().replace(/^Bearer\s+/i, "");
-  const [payload, sig] = trimmed.split(".");
+  const parts = trimmed.split(".");
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
   if (!payload || !sig) return null;
-  const expected = sign(payload);
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
   try {
+    const expected = sign(payload);
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
     const data = JSON.parse(
       Buffer.from(payload, "base64url").toString("utf8"),
     ) as { uid?: number; exp?: number };
+    
     if (!data.uid || !data.exp || data.exp < Date.now()) return null;
     return data.uid;
   } catch {
