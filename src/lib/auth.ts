@@ -4,8 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, type User } from "@/db/schema";
 
-export const ADMIN_EMAIL = process.env.ADMIN_EMAIL as string;[cite: 1]
-export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD as string;[cite: 1]
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL as string;
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD as string;
 
 const SECRET = process.env.SESSION_SECRET ?? "cw-shop-session-secret-2026";
 export const SESSION_COOKIE = "dt_session";
