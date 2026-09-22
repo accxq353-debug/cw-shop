@@ -4,10 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, type User } from "@/db/schema";
 
-export const ADMIN_EMAIL =
-  process.env.ADMIN_EMAIL ?? "westaswestas61@gmail.com";
-export const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD ?? "@Westusss18378234";
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 const SECRET = process.env.SESSION_SECRET ?? "cw-shop-session-secret-2026";
 export const SESSION_COOKIE = "dt_session";
@@ -62,8 +60,6 @@ export function readToken(token: string | undefined): number | null {
 export async function setSession(userId: number): Promise<string> {
   const jar = await cookies();
   const token = createToken(userId);
-  // SameSite=None so the session also survives when the preview is opened
-  // inside an embedded frame; browsers require Secure together with it.
   const secure = process.env.NODE_ENV === "production";
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -85,7 +81,6 @@ export async function currentUser(): Promise<User | null> {
   let uid = readToken(jar.get(SESSION_COOKIE)?.value);
 
   if (!uid) {
-    // fallback for browsers that block cookies in embedded contexts
     const hdrs = await headers();
     uid = readToken(hdrs.get("x-dt-token") ?? undefined);
   }
