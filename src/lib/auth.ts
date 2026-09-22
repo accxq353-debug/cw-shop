@@ -4,10 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, type User } from "@/db/schema";
 
-export const ADMIN_EMAIL =
-  process.env.ADMIN_EMAIL ?? "westaswestas61@gmail.com";
-export const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD ?? "@Westusss18378234";
+export const ADMIN_EMAIL: string = process.env.ADMIN_EMAIL ?? "";
+export const ADMIN_PASSWORD: string = process.env.ADMIN_PASSWORD ?? "";
 
 const SECRET = process.env.SESSION_SECRET ?? "cw-shop-session-secret-2026";
 export const SESSION_COOKIE = "dt_session";
@@ -42,8 +40,7 @@ export function createToken(userId: number): string {
 
 export function readToken(token: string | undefined): number | null {
   if (!token) return null;
-  const trimmed = token.trim().replace(/^Bearer\s+/i, "");
-  const [payload, sig] = trimmed.split(".");
+  const [payload, sig] = token.split(".");
   if (!payload || !sig) return null;
   const expected = sign(payload);
   const a = Buffer.from(sig);
@@ -64,7 +61,6 @@ export async function setSession(userId: number): Promise<string> {
   const jar = await cookies();
   const token = createToken(userId);
   const secure = process.env.NODE_ENV === "production";
-  
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: secure ? "none" : "lax",
@@ -81,37 +77,17 @@ export async function clearSession() {
 }
 
 export async function currentUser(): Promise<User | null> {
-  let uid: number | null = null;
-  
-  // 1. Try cookie
-  try {
-    const jar = await cookies();
-    uid = readToken(jar.get(SESSION_COOKIE)?.value);
-  } catch {}
+  const jar = await cookies();
+  let uid = readToken(jar.get(SESSION_COOKIE)?.value);
 
-  // 2. Try header fallbacks (x-dt-token or Authorization: Bearer <token>)
   if (!uid) {
-    try {
-      const hdrs = await headers();
-      uid = readToken(hdrs.get("x-dt-token") ?? undefined);
-      if (!uid) {
-        const authHeader = hdrs.get("authorization");
-        if (authHeader) {
-          uid = readToken(authHeader);
-        }
-      }
-    } catch {}
+    const hdrs = await headers();
+    uid = readToken(hdrs.get("x-dt-token") ?? undefined);
   }
-  
   if (!uid) return null;
 
-  try {
-    const rows = await db.select().from(users).where(eq(users.id, uid)).limit(1);
-    return rows[0] ?? null;
-  } catch (err) {
-    console.error("currentUser db query error:", err);
-    return null;
-  }
+  const rows = await db.select().from(users).where(eq(users.id, uid)).limit(1);
+  return rows[0] ?? null;
 }
 
 export async function currentAdmin(): Promise<User | null> {
